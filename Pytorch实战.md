@@ -118,7 +118,9 @@ def __init__(self, size, padding=None, pad_if_needed=False, fill=0, padding_mode
 
 size：裁剪后尺寸，（H，W）或W
 
-对tensor类型，PIL类型进行随机裁剪，进行数据扩充，提高模型精度，增强模型稳定性
+对tensor类型，PIL类型进行随机裁剪，进行数据扩充，提高模型精度，
+
+增强模型稳定性
 
 使用范例：
 
@@ -257,13 +259,135 @@ class Mcc(nn.Module):
         return x
 ```
 
-3.2 池化层
+## 3.2 池化层
 
 池化层对特征进一步进行提取，压缩了特征大小，减小数据大小，利于运算
 
-3.2.1 MaxPools
+### 3.2.1 MaxPools
 
-3.3 线性层
+在实践中，最大池化的效果比较好，同时也有平均池化就是把取最大值
 
-3.4 非线性层
+变为取平均值
 
+kernel_size(int or tuple) ： max pooling的窗口大小
+
+stride(int or tuple, optional) ： max pooling的窗口移动的步长。默认
+
+值是kernel_size
+
+padding(int or tuple, optional) ：输入的每一条边补充0的层数
+
+dilation(int or tuple, optional) ：一个控制窗口中元素步幅的参数
+
+return_indices ：如果等于True，会返回输出最大值的序号，对于上采
+
+样操作会有帮助
+
+ceil_mode ： 如果等于True，计算输出信号大小的时候，会使用向上取
+
+整，代替默认的向下取整的操作
+
+例：
+
+```python
+torch.nn.MaxPool2d(2)
+```
+
+## 3.3 线性层
+
+```python
+def __init__(self, in_features: int, out_features: int, bias: bool = True,
+             device=None, dtype=None) -> None:
+```
+
+in_features：输入的二维张量的大小，即输入的[batch_size, size]
+
+中的size。
+
+out_features：指的是输出的二维张量的大小，即输出的二维张量的
+
+形状为[batch_size，output_size]，当然，它也代表了该全连接层的神
+
+经元个数。
+
+从输入输出的张量的shape角度来理解，相当于一个输入为
+
+[batch_size, in_features]的张量变换成了[batch_size, out_features]的
+
+输出张量。
+
+例：
+
+```python
+...
+self.fc1 = nn.Linear(16*5*5, 120)
+self.fc2 = nn.Linear(120, 84)
+self.fc3 = nn.Linear(84, 10)
+...
+```
+
+## 3.4 非线性层
+
+### 3.4.1 ReLU
+
+```python
+def relu(input: Tensor, inplace: bool = False) -> Tensor:
+```
+
+非线性激活，该函数将小于零的部分直接置为0，大于0的部分不变，起
+
+到了加强特征的作用，引入了非线性，使得模型可以应用于各种非线性
+
+情景
+
+input：一个tensor类型数据
+
+inplace：inplace参数如果设为True，它会把输出直接覆盖到输入中，这
+
+样可以节省内存/显存。
+
+```python
+import torch.nn.functional as F
+...
+x = F.relu(self.fc1(x))
+...
+```
+
+# 4.其他
+
+## 4.1 交叉熵损失函数
+
+从经过神经网络预测的标签和实际标签进行运算，得到loss，后续将其
+
+送入优化器对权重和偏差进行优化
+
+例：
+
+```python
+loss_fn = torch.nn.CrossEntropyLoss()
+...
+		outputs = mcc(imgs)
+        loss = loss_fn(outputs, targets)
+        ...
+```
+
+## 4.2 杂项
+
+作用就是要寻找到loss最小的那个点的那个点所对应的权重和偏差，学
+
+习率的设置，过大找到最优点的速度很慢，过小容易陷入局部最优，可
+
+以将学习率设置为随着训练轮数的增加逐渐减小，在一定程度上能够有
+
+比较好的效果
+
+```python
+learning_rate = 0.005
+optimizer = torch.optim.SGD(mcc.parameters(), lr=learning_rate)
+		...
+        # 梯度清0，反向传播，优化器
+		optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        ...
+```
